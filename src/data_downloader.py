@@ -1,6 +1,7 @@
 # Download files from alex dataset and the using the corrosponding dois download full papers. 
 import pyalex
-from scidownl import scihub_download
+from paperscraper.pdf import save_pdf
+#pip install git+https://github.com/titipata/scipdf_parser
 
 DOI_SAVE_PATH = "./data/doi_list.txt"
 
@@ -37,15 +38,19 @@ def retrieve_pdf_from_doi(year):
     print(len(year_doi_list))
     # try to download the doi, if fail do nothing if success put the file in year folder and save it to success list
     for doi in year_doi_list:
-        out = "./data/" + str(year) + "/\"" + doi + "\".pdf"
+        name = doi
+        print(doi)
+        out = "./data/" + str(year) + "/" + name.replace("/", "").replace(":", "") + ".pdf"
+        paper_data = {'doi': doi}
+        save_pdf(paper_data, filepath=out)
         print(out)
-        scihub_download(doi, paper_type="doi", out=out)
+        #scihub_download("https://doi.org/10.1145/3375633", out=out, paper_type="doi")
         break
     return
 
 def main():
     #get_and_save_dois()
-    retrieve_pdf_from_doi(1980)
+    retrieve_pdf_from_doi(1983)
     return 0
 
 if __name__ == "__main__":  
