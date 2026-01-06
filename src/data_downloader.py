@@ -1,10 +1,57 @@
 # Download files from alex dataset and the using the corrosponding dois download full papers. 
 import pyalex
-from paperscraper.pdf import save_pdf
+#from paperscraper.pdf import save_pdf
 #pip install git+https://github.com/titipata/scipdf_parser
 
 DOI_SAVE_PATH = "./data/doi_list.txt"
+INTERSECT_ID_SAVE_PATH = "./data/intersect_list.txt"
 
+def find_intersecting_authors_2021_2023_2025():
+    author_dict = dict()
+    #print(pyalex.Works().filter(publication_year = year).select("authorships").count())
+    # loop through years
+    for year in [2021, 2023, 2025]:
+        year_index = int((year - 2021) / 2)
+        for seed in range(0, 2_000):
+            # seed to get random sample of 10_000 (max value), select only authorships
+            pages = pyalex.Works().sample(10_000, seed).filter(publication_year = year).select("authorships").paginate(method="page", per_page=200)
+            page_number = 0
+            for page in pages:
+                page_number += 1
+                print(year, seed, page_number, len(author_dict))
+                for work in page:
+                    # save in dict, update bool based on year
+                    for author in work["authorships"]:
+                        if author["author"]["id"] is not None:
+                            key = author["author"]["id"].split("/")[-1]
+                            if author_dict.get(key) is not None:
+                                author_dict[key][year_index] = True
+                            else:
+                                author_dict[key] = [False, False, False]
+                                author_dict[key][year_index] = True
+    # analyze the dict
+    count_2021 = 0
+    count_2023 = 0
+    count_2025 = 0
+    count_intersect = 0
+    keys_intersect = []
+    for key in author_dict.keys():
+        if author_dict[key][0] == True:
+            count_2021 += 1
+        if author_dict[key][1] == True:
+            count_2023 += 1
+        if author_dict[key][2] == True:
+            count_2025 += 1
+        if author_dict[key][0] and author_dict[key][1] and author_dict[key][2] == True:
+            count_intersect += 1
+            keys_intersect.append(key + "\n")
+    print("2021: ", count_2021, " 2023: ", count_2023, " 2025: ", count_2025, " Intersect: ", count_intersect)
+    print(keys_intersect)
+    with open(INTERSECT_ID_SAVE_PATH, "w") as f:
+        f.writelines(keys_intersect)
+    return
+
+# obsolete
 def get_and_save_dois():
     # go through years 1980 to 2025
     for year in range(1980, 2026):
@@ -50,7 +97,12 @@ def retrieve_pdf_from_doi(year):
 
 def main():
     #get_and_save_dois()
-    retrieve_pdf_from_doi(1983)
+    #work = pyalex.Works().filter(doi = "https://doi.org/10.1186/s12859-024-06020-0").get()
+    #pages = pyalex.Authors().filter(id = "https://openalex.org/A5060528195").get()
+    #count = 0
+    #print(pages)
+    find_intersecting_authors_2021_2023_2025()
+    #retrieve_pdf_from_doi(1983)
     return 0
 
 if __name__ == "__main__":  
