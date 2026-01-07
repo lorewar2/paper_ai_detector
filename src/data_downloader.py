@@ -12,9 +12,9 @@ def find_intersecting_authors_2021_2023_2025():
     # loop through years
     for year in [2021, 2023, 2025]:
         year_index = int((year - 2021) / 2)
-        for seed in range(0, 2_000):
+        for seed in range(0, 500):
             # seed to get random sample of 10_000 (max value), select only authorships
-            pages = pyalex.Works().sample(10_000, seed).filter(publication_year = year).select("authorships").paginate(method="page", per_page=200)
+            pages = pyalex.Works().sample(10_000, seed).filter(publication_year = year, as_oa_accepted_or_published_version = True, language = "en").select("authorships").paginate(method="page", per_page=200)
             page_number = 0
             for page in pages:
                 page_number += 1
