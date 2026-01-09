@@ -1,5 +1,7 @@
 # Download files from alex dataset and the using the corrosponding dois download full papers. 
 import pyalex
+import os
+import random
 #from paperscraper.pdf import save_pdf
 #pip install git+https://github.com/titipata/scipdf_parser
 
@@ -7,18 +9,22 @@ DOI_SAVE_PATH = "./data/doi_list.txt"
 INTERSECT_ID_SAVE_PATH = "./data/intersect_list.txt"
 
 def find_intersecting_authors_2021_2023_2025():
-    author_dict = dict()
+    years_to_analyze = [2021, 2023, 2025]
+    # load previous entries
+    author_dict = load_dict_from_file(years_to_analyze)
     #print(pyalex.Works().filter(publication_year = year).select("authorships").count())
+    pyalex.config.email = "mw8511@live.com"
     # loop through years
-    for year in [2021, 2023, 2025]:
+    for year in years_to_analyze:
         year_index = int((year - 2021) / 2)
-        for seed in range(0, 500):
+        random_seed_start = random.randint(0, 1_000_000)
+        for seed in range(random_seed_start, random_seed_start + 100):
             # seed to get random sample of 10_000 (max value), select only authorships
-            pages = pyalex.Works().sample(10_000, seed).filter(publication_year = year, as_oa_accepted_or_published_version = True, language = "en").select("authorships").paginate(method="page", per_page=200)
+            pages = pyalex.Works().sample(10_000, seed).filter(publication_year = year, has_oa_accepted_or_published_version = True, language = "en").select("authorships").paginate(method="page", per_page=200)
             page_number = 0
             for page in pages:
                 page_number += 1
-                print(year, seed, page_number, len(author_dict))
+                print(year, seed, seed -  random_seed_start,  page_number, len(author_dict))
                 for work in page:
                     # save in dict, update bool based on year
                     for author in work["authorships"]:
@@ -29,6 +35,17 @@ def find_intersecting_authors_2021_2023_2025():
                             else:
                                 author_dict[key] = [False, False, False]
                                 author_dict[key][year_index] = True
+                if page_number == 50:
+                    break
+            # intermediate save
+            if seed % 10 == 0 and seed != 0:
+                keys_save = list()
+                for key in author_dict.keys():
+                    if author_dict[key][year_index] == True:
+                        keys_save.append(key + "\n")
+                with open("./data/" + str(year) + ".txt", "w") as f:
+                    f.writelines(keys_save)
+
     # analyze the dict
     count_2021 = 0
     count_2023 = 0
@@ -46,11 +63,26 @@ def find_intersecting_authors_2021_2023_2025():
             count_intersect += 1
             keys_intersect.append(key + "\n")
     print("2021: ", count_2021, " 2023: ", count_2023, " 2025: ", count_2025, " Intersect: ", count_intersect)
-    print(keys_intersect)
     with open(INTERSECT_ID_SAVE_PATH, "w") as f:
         f.writelines(keys_intersect)
     return
 
+def load_dict_from_file(years_to_analyze):
+    author_dict = dict()
+    for year in years_to_analyze:
+        year_index = int((year - 2021) / 2)
+        file_path = "./data/" + str(year) + ".txt"
+        if os.path.isfile(file_path):
+            # open the file and load up the dict
+             with open(file_path, 'r') as file:
+                for line in file:
+                    key = line.strip()
+                    if author_dict.get(key) is not None:
+                        author_dict[key][year_index] = True
+                    else:
+                        author_dict[key] = [False, False, False]
+                        author_dict[key][year_index] = True
+    return author_dict
 # obsolete
 def get_and_save_dois():
     # go through years 1980 to 2025
