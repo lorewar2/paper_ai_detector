@@ -8,19 +8,67 @@ import random
 DOI_SAVE_PATH = "./data/doi_list.txt"
 INTERSECT_ID_SAVE_PATH = "./data/intersect_list.txt"
 
+def make_list_of_papers_authors(year):
+    #works = pyalex.Works().sample(100, random.randint(0, 100_000_000)).filter( publication_year = 2021, has_oa_accepted_or_published_version = True, language = "en", **{"primary_location.source.type":"journal"}).get()
+    #for work in works:
+    #    print(work["primary_location"]["pdf_url"])
+    # TODO make a function to load the data
+    document_info = dict()
+    
+    author_list = list()
+    # get the list of intersecting authors
+    if os.path.isfile(INTERSECT_ID_SAVE_PATH):
+            # open the file and load up the dict
+        with open(INTERSECT_ID_SAVE_PATH, 'r') as file:
+            for line in file:
+                author_id = line.strip()
+                author_list.append(author_id)
+    # go through the authors works
+    for author in author_list:
+        print(author)
+        works = pyalex.Works().filter(**{"author.id": author}, publication_year = year, has_oa_accepted_or_published_version = True, language = "en").get()
+        for work in works:
+            key = work["doi"]
+            if document_info.get(key) is None:
+                document_info[work["doi"]] = list()
+                print(work["doi"])
+                if work["primary_location"]["pdf_url"] is not None:
+                    #print(work["primary_location"]["pdf_url"])
+                    document_info[work["doi"]].append(work["primary_location"]["pdf_url"])
+                else:
+                    #print("None")
+                    document_info[work["doi"]].append("None")
+                if work["primary_location"]["source"] is not None:
+                    #print(work["primary_location"]["source"]["display_name"])
+                    document_info[work["doi"]].append(work["primary_location"]["source"]["display_name"])
+                else:
+                    #print("None")
+                    document_info[work["doi"]].append("None")
+                if len(work["authorships"][0]["countries"]) != 0:
+                    #print(work["authorships"][0]["countries"][0])
+                    document_info[work["doi"]].append(work["authorships"][0]["countries"][0])
+                else:
+                    #print("None")
+                    document_info[work["doi"]].append("None")
+                print(document_info[work["doi"]])
+                print("\n")
+                #print(work["doi"], work["primary_location"]["pdf_url"], work["primary_location"]["source"]["display_name"], work["authorships"][0]["countries"])
+                # TODO SAVE THE DATA (document info)
+    return
+
+# Run this until, no new authors are found
 def find_intersecting_authors_2021_2023_2025():
     years_to_analyze = [2021, 2023, 2025]
     # load previous entries
     author_dict = load_dict_from_file(years_to_analyze)
     #print(pyalex.Works().filter(publication_year = year).select("authorships").count())
-    pyalex.config.email = "mw8511@live.com"
     # loop through years
     for year in years_to_analyze:
         year_index = int((year - 2021) / 2)
-        random_seed_start = random.randint(0, 1_000_000)
-        for seed in range(random_seed_start, random_seed_start + 100):
+        random_seed_start = random.randint(0, 100_000_000)
+        for seed in range(random_seed_start, random_seed_start + 10):
             # seed to get random sample of 10_000 (max value), select only authorships
-            pages = pyalex.Works().sample(10_000, seed).filter(publication_year = year, has_oa_accepted_or_published_version = True, language = "en").select("authorships").paginate(method="page", per_page=200)
+            pages = pyalex.Works().sample(10_000, seed).filter(publication_year = year, has_oa_accepted_or_published_version = True, language = "en", **{"primary_location.source.type":"journal"}).select("authorships").paginate(method="page", per_page=200)
             page_number = 0
             for page in pages:
                 page_number += 1
@@ -134,6 +182,7 @@ def main():
     #count = 0
     #print(pages)
     find_intersecting_authors_2021_2023_2025()
+    #make_list_of_papers_authors(2023)
     #retrieve_pdf_from_doi(1983)
     return 0
 
